@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from sqlmodel import SQLModel, create_engine
 import os
 
-from routers import talk_router, report_router
+from routers import talk_router, report_router, user_router
 
 app = FastAPI()
 
@@ -12,6 +12,7 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 app.include_router(talk_router)
 app.include_router(report_router)
+app.include_router(user_router)
 
 @app.on_event("startup")
 def on_startup():

@@ -1,7 +1,6 @@
 from sqlmodel import SQLModel
 
 class ReportInSchema(SQLModel, table = False):
-    user_id: int
     conversation_id: str
 
 class getReportOutSchema(SQLModel, table = False):

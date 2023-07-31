@@ -2,13 +2,13 @@ from sqlmodel import select
 import os
 import openai
 import json
+from fastapi import HTTPException, status
 
 from service import ConversationHandler
 from models import DailyReport, Message
 
 class ReportHandler:
-    def __init__(self, session, user_id, conversation_id):
-        self.user_id = user_id
+    def __init__(self, session, conversation_id):
         self.session = session
         self.conversation_id = conversation_id
         openai.api_key = os.environ["GPT_APIKEY"]
@@ -133,12 +133,18 @@ class ReportHandler:
         report_id = self.session.exec(report_object).one().report_id
 
         return {
-            "report_id": report_id
+            "message": "리포트가 생성되었습니다."
         }
 
     def get_dailyreport(self):
-        report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
-        report = self.session.exec(report_object).one()
+        try:
+            report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
+            report = self.session.exec(report_object).one()
+        except Exception:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail = "no such conversation id"
+            )
 
         return report
 
