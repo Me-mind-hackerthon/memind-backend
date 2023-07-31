@@ -136,19 +136,8 @@ class ReportHandler:
             "report_id": report_id
         }
 
-    def get_dailyreport(self):
-        report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
+    def get_dailyreport(self, report_id):
+        report_object = select(DailyReport).where(DailyReport.report_id == report_id)
         report = self.session.exec(report_object).one()
 
         return report
-
-    def delete_dailyreport(self):
-        report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
-        report_object = self.session.exec(report_object).one()
-
-        self.session.delete(report_object)
-        self.session.commit()
-
-        return {
-            "message": "리포트가 삭제되었습니다."
-        }
