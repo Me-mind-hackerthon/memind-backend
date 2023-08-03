@@ -6,9 +6,9 @@ import openai
 from models import Conversation, Message
 
 class ConversationHandler:
-    def __init__(self, session, user_id):
+    def __init__(self, session, nickname):
         self.session = session
-        self.user_id = user_id
+        self.nickname = nickname
         # OpenAI GPT-3.5 Turbo API 인증 설정
         openai.api_key = os.environ["GPT_APIKEY"]
 
@@ -43,7 +43,7 @@ class ConversationHandler:
     def start_conversation(self):
         conversation_id = uuid4().hex
         conversation = Conversation(
-            user_id = self.user_id,
+            nickname = self.nickname,
             conversation_id = conversation_id
         )
 

@@ -9,14 +9,26 @@ class userHandler:
     def __init__(self, session):
         self.session = session
 
-    def sign_up(self, user_id, password):
-        user_exist = select(User).where(User.user_id == user_id)
+    def get_user_info(self, nickname):
+        try:
+            user_exist = select(User).where(User.nickname == nickname)
+            user_exist = self.session.exec(user_exist).one()
+        except Exception as e:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail = "user not found"
+            )
+
+        return user_exist
+
+    def sign_up(self, nickname, password):
+        user_exist = select(User).where(User.nickname == nickname)
         user_exist = self.session.exec(user_exist).first()
         hashed_password = hash_password.HashPassword().create_hash(password)
 
         try:
             user = User(
-                user_id = user_id,
+                nickname = nickname,
                 password = hashed_password
             )
 
@@ -34,18 +46,10 @@ class userHandler:
         }
 
     def sign_in(self, user):
-        try:
-            user_exist = select(User).where(User.user_id == user.username)
-            user_exist = self.session.exec(user_exist).first()
-        except Exception as e:
-            print(e)
-            raise HTTPException(
-                status_code = status.HTTP_404_NOT_FOUND,
-                detail = "user not found"
-            )
+        user_object = self.get_user_info(user.username)
 
-        if(hash_password.HashPassword().verify_hash(user.password, user_exist.password)):
-            access_token = create_access_token(user_exist.user_id)
+        if(hash_password.HashPassword().verify_hash(user.password, user_object.password)):
+            access_token = create_access_token(user_object.nickname)
             return {
                 "access_token": access_token,
                 "token_type": "Bearer"
