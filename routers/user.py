@@ -5,7 +5,7 @@ from sqlmodel import select
 from auth import HashPassword, authenticate
 from database.connection import get_session
 from service import userHandler
-from schema import SignUpSchema, TokenResponse, messageOnlySchema
+from schema import SignUpSchema, TokenResponse, messageOnlySchema, UserInfo
 
 user_router = APIRouter(
     prefix = "/api/user", tags = ["user"]
@@ -25,7 +25,12 @@ def sign_user_in(user: OAuth2PasswordRequestForm = Depends(), session = Depends(
 
 @user_router.get("/me")
 def get_user_info(user: str = Depends(authenticate), session = Depends(get_session)):
-    print(user)
     result = userHandler(session).get_user_info(user)
+
+    return result
+
+@user_router.post("/nickname")
+def check_nickname(nickname: UserInfo, session = Depends(get_session)):
+    result = userHandler(session).check_nickname(nickname.nickname)
 
     return result

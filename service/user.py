@@ -58,3 +58,15 @@ class userHandler:
             status_code = status.HTTP_401_UNAUTHORIZED,
             detail = "invalid details passed"
         )
+
+    def check_nickname(self, nickname):
+        try:
+            user_exist = select(User).where(User.nickname == nickname)
+            user_exist = self.session.exec(user_exist).one()
+        except Exception as e:
+            return {"message": "ok"}
+
+        raise HTTPException(
+                status_code = status.HTTP_409_CONFLICT,
+                detail = "닉네임 중복"
+            )
