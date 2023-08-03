@@ -2,8 +2,10 @@ from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
 
+from .user import User
+
 class Conversation(SQLModel, table = True):
-    user_id: str # 로그인 구현하고 user 테이블의 user_id와 연결
+    nickname: str = Field(foreign_key = User.nickname)
     conversation_id: str = Field(default = None, primary_key = True)
     Conversation_date: Optional[datetime] = Field(default_factory = datetime.today, nullable = False)
 

@@ -6,12 +6,12 @@ from schema import ConversationInSchema, ConversationOutSchema
 from auth import authenticate
 
 talk_router = APIRouter(
-    prefix = "/talk", tags = ["talk"]
+    prefix = "/api/talk", tags = ["talk"]
 )
 
 @talk_router.post("/start")
 def start_conversation(user: str = Depends(authenticate), session = Depends(get_session)):
-    result = ConversationHandler(session = session, user_id = user).start_conversation()
+    result = ConversationHandler(session = session, nickname = user).start_conversation()
 
     return result
 
@@ -21,6 +21,6 @@ def end_conversation(user: str = Depends(authenticate), session = Depends(get_se
 
 @talk_router.post("/answer")
 def answer_question(conversation_input: ConversationInSchema, user: str = Depends(authenticate), session = Depends(get_session)) -> ConversationOutSchema:
-    result = ConversationHandler(session = session, user_id = user).answer_conversation(conversation_input.user_answer, conversation_input.conversation_id)
+    result = ConversationHandler(session = session, nickname = user).answer_conversation(conversation_input.user_answer, conversation_input.conversation_id)
 
     return result

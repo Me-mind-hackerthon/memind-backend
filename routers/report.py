@@ -6,7 +6,7 @@ from database.connection import get_session
 from auth import authenticate
 
 report_router = APIRouter(
-    prefix = "/report", tags = ["report"]
+    prefix = "/api/report", tags = ["report"]
 )
 
 @report_router.get("/{conversation_id}")
