@@ -1,5 +1,5 @@
-from sqlmodel import SQLModel, Field
-from typing import Optional
+from sqlmodel import SQLModel, Field, Column, JSON
+from typing import Optional, List
 from models import Conversation
 
 class DailyReport(SQLModel, table = True):
@@ -15,3 +15,4 @@ class DailyReport(SQLModel, table = True):
     anger: int
     summary: str
     midjourney_image: Optional[str] = Field(default = None)
+    keyword: List[str] = Field(sa_column = Column(JSON))
