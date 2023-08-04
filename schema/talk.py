@@ -6,6 +6,7 @@ class ConversationInSchema(SQLModel, table = False):
 
 class ConversationOutSchema(SQLModel, table = False):
     message: str
+    is_enough: bool
 
 class GetConversationByMonth(SQLModel, table = False):
     conversation_date: str

@@ -10,8 +10,8 @@ talk_router = APIRouter(
 )
 
 @talk_router.post("/start")
-def start_conversation(user: str = Depends(authenticate), session = Depends(get_session)):
-    result = ConversationHandler(session = session, nickname = user).start_conversation()
+def start_conversation(date: str, user: str = Depends(authenticate), session = Depends(get_session)):
+    result = ConversationHandler(session = session, nickname = user).start_conversation(date)
 
     return result
 

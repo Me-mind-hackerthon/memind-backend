@@ -3,7 +3,7 @@ import os
 from sqlmodel import select
 from fastapi import HTTPException, status
 import openai
-from datetime import datetime
+from datetime import datetime, date
 
 from models import Conversation, Message
 
@@ -34,6 +34,12 @@ class ConversationHandler:
 
         return chat_history
 
+    def __get_all_full_messages(self, conversation_id):
+        message_object = select(Message).where(Message.conversation_id == conversation_id)
+        messages = self.session.exec(message_object).all()
+
+        return messages
+
     def get_conversation_by_month(self, date):
         year, month = self.__parsing_date(date)
         conversation_object = select(Conversation).where(Conversation.nickname == self.nickname).where(Conversation.year == year).where(Conversation.month == month)
@@ -61,7 +67,34 @@ class ConversationHandler:
 
         return
 
-    def start_conversation(self):
+    def __get_conversation_id_by_date(self, date):
+        date_object = datetime.strptime(date, "%Y-%m-%d")
+
+        try:
+            conversation_object = select(Conversation).where(Conversation.year == date_object.year).where(Conversation.month == date_object.month).where(Conversation.day == date_object.day)
+            conversation_object = self.session.exec(conversation_object).one()
+            print(conversation_object)
+        except Exception:
+            return 0
+
+        return conversation_object.conversation_id
+
+    def start_conversation(self, date):
+        is_created = self.__get_conversation_id_by_date(date)
+        if(is_created):
+            chat_history = self.__get_all_full_messages(is_created)
+
+            if(len(chat_history) > 13):
+                is_enough = True
+            else:
+                is_enough = False
+
+            return {
+                "conversation_id": is_created,
+                "chat_history": chat_history,
+                "is_enough": is_enough
+            }
+
         conversation_id = uuid4().hex
         conversation = Conversation(
             nickname = self.nickname,
@@ -115,7 +148,13 @@ class ConversationHandler:
 
         self.create_message(conversation_id, order + 1, assistant_response, False)
 
+        if(order > 13):
+            is_enough = True
+        else:
+            is_enough = False
+
         # 챗봇의 답변을 사용자 메시지와 함께 반환합니다.
         return {
-            "message": assistant_response
+            "message": assistant_response,
+            "is_enough": is_enough
         }
