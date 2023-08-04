@@ -1,13 +1,15 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import date
 
 from .user import User
 
 class Conversation(SQLModel, table = True):
     nickname: str = Field(foreign_key = User.nickname)
     conversation_id: str = Field(default = None, primary_key = True)
-    Conversation_date: Optional[datetime] = Field(default_factory = datetime.today, nullable = False)
+    year: Optional[int] = Field(default = date.today().year, nullable = False)
+    month: Optional[int] = Field(default = date.today().month, nullable = False)
+    day: Optional[int] = Field(default = date.today().day, nullable = False)
 
 class Message(SQLModel, table = True):
     conversation_id: str = Field(foreign_key = Conversation.conversation_id)
