@@ -42,7 +42,7 @@ class ReportHandler:
 
     def get_emotion_score(self):
         system_message = """
-            당신은 훌륭한 감정 분류기 AI 서비스입니다. 당신은 대화 내용에서 감정을 감지하고 대화의 다양한 감정 측면에 JSON 형식으로 답변합니다.
+            당신은 훌륭한 감정 평가기입니다. 당신은 대화 내용에서 대화의 다양한 감정 측면에 대해 점수를 매겨서 JSON 형식으로 답변합니다. 아래 example JSON 형식 이외에 다른 말은 하지 마세요. 그리고 더 많은 정보를 요구하지 마세요. 감정 평가가 불가능하다는 말도 안돼.
 
             example: {
                 "emotions":
@@ -58,7 +58,7 @@ class ReportHandler:
         """
         chat_data = self.__set_gpt()
         command = """
-            지금까지의 대화를 평가해줘. 결과는 아래와 같은 형태의 JSON 포맷만 내보내줘. JSON 형식 외에 다른 말은 하지마.
+            지금까지의 대화를 아래 JSON 형식으로 평가해줘. 결과는 아래와 같은 형태의 JSON 포맷만 내보내줘. JSON 형식 외에 다른 말은 하지마.
             {
                 "emotions":
                     "happiness":<0-100>,
@@ -107,10 +107,34 @@ class ReportHandler:
         }
 
     def get_keyword(self):
-        pass
+        system_message = "당신은 훌륭한 키워드 추출기입니다. 지금까지의 대화 내용 중에서 핵심 키워드를 명사와 형용사 형태로 추출해주세요. 결과는 띄어쓰기로 구분된 다음과 같은 문자열 형태이고, 사용자에게 더 많은 정보를 요구하지 말고 아래 형태 외에 다른 말은 하지마. '첫번째 키워드, 두번째 키워드'"
+        chat_data = self.__set_gpt()
+        command = "지금까지의 대화 내용을 바탕으로 핵심 키워드를 추출해줘. 결과는 띄어쓰기로 구분된 다음과 같은 문자열 형태이고, 아래 형태 외에 다른 말은 하지마. '첫번째 키워드, 두번째 키워드'. 대화가 너무 짧아서 정보를 추출할 수 없더라고 적어도 단어 하나는 추출해 내야 해"
+        chat_data.extend([{"role": "system", "content": system_message}, {"role": "user", "content": command}])
+
+        # OpenAI GPT-3.5 Turbo 모델에 대화를 요청합니다.
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=chat_data
+        )
+
+        # 모델의 답변을 가져옵니다.
+        assistant_response = response['choices'][0]['message']['content']
+        print(assistant_response)
+
+        return {
+            "keyword": list(assistant_response.split(', '))
+        }
 
     def create_dailyreport(self):
-        emotion_list = self.get_emotion_score()["emotions"]
+        try:
+            emotion_list = self.get_emotion_score()["emotions"]
+            keyword_list = self.get_keyword()
+            print(keyword_list["keyword"])
+        except Exception:
+            raise HTTPException(
+                status_code = status.HTTP_417_EXPECTATION_FAILED, detail = "다시 시도해주세요"
+            )
         summary = self.create_summary()
 
         dailyreport = DailyReport(
@@ -123,17 +147,18 @@ class ReportHandler:
             sadness = emotion_list["sadness"],
             suffering = emotion_list["suffering"],
             anger = emotion_list["anger"],
-            summary = summary["summary"]
+            summary = summary["summary"],
+            keyword = keyword_list["keyword"]
         )
 
         self.session.add(dailyreport)
         self.session.commit()
 
         report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
-        report_id = self.session.exec(report_object).one().report_id
 
         return {
-            "message": "리포트가 생성되었습니다."
+            "message": "리포트가 생성되었습니다.",
+            "keyword": keyword_list["keyword"]
         }
 
     def get_dailyreport(self):
