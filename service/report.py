@@ -140,6 +140,7 @@ class ReportHandler:
         try:
             report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
             report = self.session.exec(report_object).one()
+            print(report)
         except Exception:
             raise HTTPException(
                 status_code = status.HTTP_404_NOT_FOUND,
@@ -157,4 +158,23 @@ class ReportHandler:
 
         return {
             "message": "리포트가 삭제되었습니다."
+        }
+
+    def create_request_id(self, request_id):
+        try:
+            report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
+            report_object = self.session.exec(report_object).one()
+        except Exception:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND, detail = "no such conversation id"
+            )
+
+        report_object.midjourney_image = request_id
+        print(report_object)
+        self.session.add(report_object)
+        self.session.commit()
+        self.session.refresh(report_object)
+
+        return {
+            "message": "success"
         }
