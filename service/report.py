@@ -81,7 +81,6 @@ class ReportHandler:
 
         # 모델의 답변을 가져옵니다.
         assistant_response = response['choices'][0]['message']['content']
-        print(assistant_response)
         assistant_response = json.loads(assistant_response)
 
         return assistant_response
@@ -100,16 +99,24 @@ class ReportHandler:
 
         # 모델의 답변을 가져옵니다.
         assistant_response = response['choices'][0]['message']['content']
-        print(assistant_response)
-
         return {
             "summary": assistant_response
         }
 
     def get_keyword(self):
-        system_message = "당신은 훌륭한 키워드 추출기입니다. 지금까지의 대화 내용 중에서 핵심 키워드를 명사와 형용사 형태로 추출해주세요. 결과는 띄어쓰기로 구분된 다음과 같은 문자열 형태이고, 사용자에게 더 많은 정보를 요구하지 말고 아래 형태 외에 다른 말은 하지마. '첫번째 키워드, 두번째 키워드'"
+        system_message = """
+            당신은 훌륭한 키워드 추출기입니다. 지금까지의 대화 내용 중에서 핵심 키워드를 명사와 형용사 형태로 추출해주세요. 결과는 아래와 같은 형태의 JSON 포맷 형식이고, 사용자에게 더 많은 정보를 요구하지 말고 아래 형태 외에 다른 말은 하지마.
+            {
+                "keyword": [첫번째 키워드, 두번째 키워드]
+            }
+        """
         chat_data = self.__set_gpt()
-        command = "지금까지의 대화 내용을 바탕으로 핵심 키워드를 추출해줘. 결과는 띄어쓰기로 구분된 다음과 같은 문자열 형태이고, 아래 형태 외에 다른 말은 하지마. '첫번째 키워드, 두번째 키워드'. 대화가 너무 짧아서 정보를 추출할 수 없더라고 적어도 단어 하나는 추출해 내야 해"
+        command = """
+            지금까지의 대화 내용을 바탕으로 핵심 키워드를 추출해줘. 결과는 아래와 같은 형태의 JSON 포맷만 내보내줘. JSON 형식 외에 다른 말은 하지마. '첫번째 키워드, 두번째 키워드'. 대화가 너무 짧아서 정보를 추출할 수 없더라고 적어도 단어 하나는 추출해 내야 해
+            {
+                "keyword": [첫번째 키워드, 두번째 키워드]
+            }
+        """
         chat_data.extend([{"role": "system", "content": system_message}, {"role": "user", "content": command}])
 
         # OpenAI GPT-3.5 Turbo 모델에 대화를 요청합니다.
@@ -120,17 +127,14 @@ class ReportHandler:
 
         # 모델의 답변을 가져옵니다.
         assistant_response = response['choices'][0]['message']['content']
-        print(assistant_response)
+        assistant_response = json.loads(assistant_response)
 
-        return {
-            "keyword": list(assistant_response.split(', '))
-        }
+        return assistant_response
 
     def create_dailyreport(self):
         try:
             emotion_list = self.get_emotion_score()["emotions"]
             keyword_list = self.get_keyword()
-            print(keyword_list["keyword"])
         except Exception:
             raise HTTPException(
                 status_code = status.HTTP_417_EXPECTATION_FAILED, detail = "다시 시도해주세요"
@@ -165,7 +169,6 @@ class ReportHandler:
         try:
             report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
             report = self.session.exec(report_object).one()
-            print(report)
         except Exception:
             raise HTTPException(
                 status_code = status.HTTP_404_NOT_FOUND,
@@ -195,7 +198,6 @@ class ReportHandler:
             )
 
         report_object.midjourney_image = request_id
-        print(report_object)
         self.session.add(report_object)
         self.session.commit()
         self.session.refresh(report_object)

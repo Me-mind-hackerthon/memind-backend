@@ -72,52 +72,51 @@ class ConversationHandler:
 
         try:
             conversation_object = select(Conversation).where(Conversation.year == date_object.year).where(Conversation.month == date_object.month).where(Conversation.day == date_object.day)
-            conversation_object = self.session.exec(conversation_object).one()
-            print(conversation_object)
+            conversation_object = self.session.exec(conversation_object).first()
         except Exception:
             return 0
 
         return conversation_object.conversation_id
 
     def start_conversation(self, date):
-        is_created = self.__get_conversation_id_by_date(date)
-        if(is_created):
-            chat_history = self.__get_all_full_messages(is_created)
+        conversation_id = self.__get_conversation_id_by_date(date)
+        if(conversation_id):
+            chat_history = self.__get_all_full_messages(conversation_id)
+        else:
+            conversation_id = uuid4().hex
+            conversation = Conversation(
+                nickname = self.nickname,
+                conversation_id = conversation_id
+            )
 
-            if(len(chat_history) > 13):
-                is_enough = True
-            else:
-                is_enough = False
+            self.session.add(conversation)
+            self.session.commit()
 
-            return {
-                "conversation_id": is_created,
-                "chat_history": chat_history,
-                "is_enough": is_enough
-            }
+            messages = [
+                {"role": "system", "content": "너는 친절한 심리상담가야. 사용자에게 오늘 하루는 어땠는지 물어보고 사용자가 응답하면 더 자세히 물어봐주고 위로해주는 상담가의 역할을 해줘. 사용자에게 보내는 너의 첫 메세지는 '안녕하세요! 오늘 하루는 어땠나요?'로 고정이야. 사용자의 응답에 적절하게 반응해주고 항상 더 자세히 질문해줘야 해. 그리고 2번 이상 응답을 받으면, '충분히 이야기를 나눈 것 같네요. 오늘 하루를 평가한다면 몇 점을 주시겠어요?'라는 말로 대화를 마무리해줘"},
+                {"role": "user", "content": "안녕"}
+            ]
 
-        conversation_id = uuid4().hex
-        conversation = Conversation(
-            nickname = self.nickname,
-            conversation_id = conversation_id
-        )
+            # OpenAI GPT-3.5 Turbo 모델에 대화를 요청합니다.
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages
+            )
 
-        self.session.add(conversation)
-        self.session.commit()
+            self.create_message(conversation_id, 0, response['choices'][0]['message']['content'], False)
 
-        messages = [
-            {"role": "system", "content": "너는 친절한 심리상담가야. 사용자에게 오늘 하루는 어땠는지 물어보고 사용자가 응답하면 더 자세히 물어봐주고 위로해주는 상담가의 역할을 해줘. 사용자에게 보내는 너의 첫 메세지는 '안녕하세요! 오늘 하루는 어땠나요?'로 고정이야. 사용자의 응답에 적절하게 반응해주고 항상 더 자세히 질문해줘야 해. 그리고 2번 이상 응답을 받으면, '충분히 이야기를 나눈 것 같네요. 오늘 하루를 평가한다면 몇 점을 주시겠어요?'라는 말로 대화를 마무리해줘"},
-            {"role": "user", "content": "안녕"}
-        ]
+        chat_history = self.__get_all_full_messages(conversation_id)
 
-        # OpenAI GPT-3.5 Turbo 모델에 대화를 요청합니다.
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=messages
-        )
+        if(len(chat_history) > 13):
+            is_enough = True
+        else:
+            is_enough = False
 
-        self.create_message(conversation_id, 0, response['choices'][0]['message']['content'], False)
-
-        return {"conversation_id": conversation_id, "message": response['choices'][0]['message']['content']}
+        return {
+            "conversation_id": conversation_id,
+            "chat_history": chat_history,
+            "is_enough": is_enough
+        }
 
     def answer_conversation(self, user_answer, conversation_id):
         messages = [
