@@ -14,3 +14,4 @@ class DailyReport(SQLModel, table = True):
     suffering: int
     anger: int
     summary: str
+    midjourney_image: Optional[str] = Field(default = None)
