@@ -15,3 +15,4 @@ class getReportOutSchema(SQLModel, table = False):
     suffering: int
     anger: int
     summary: str
+    midjourney_image: str
