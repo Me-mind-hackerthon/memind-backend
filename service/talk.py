@@ -1,7 +1,9 @@
 from uuid import uuid4
 import os
 from sqlmodel import select
+from fastapi import HTTPException, status
 import openai
+from datetime import datetime
 
 from models import Conversation, Message
 
@@ -11,6 +13,11 @@ class ConversationHandler:
         self.nickname = nickname
         # OpenAI GPT-3.5 Turbo API 인증 설정
         openai.api_key = os.environ["GPT_APIKEY"]
+
+    def __parsing_date(self, date):
+        date_object = datetime.strptime(date, "%Y-%m")
+
+        return date_object.year, date_object.month
 
     def get_all_messages(self, conversation_id):
         chat_history = []
@@ -26,6 +33,20 @@ class ConversationHandler:
             chat_history.append({"role": role, "content": m.message})
 
         return chat_history
+
+    def get_conversation_by_month(self, date):
+        year, month = self.__parsing_date(date)
+        conversation_object = select(Conversation).where(Conversation.nickname == self.nickname).where(Conversation.year == year).where(Conversation.month == month)
+        conversation_list = self.session.exec(conversation_object).all()
+
+        if(not conversation_list):
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND, detail = "해당 월에 작성된 일기가 없습니다"
+            )
+
+        return {
+            "conversation_list": conversation_list
+        }
 
     def create_message(self, conversation_id, order, message, is_from_user):
         message_object = Message(
