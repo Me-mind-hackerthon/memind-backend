@@ -3,7 +3,7 @@ import os
 from sqlmodel import select
 from fastapi import HTTPException, status
 import openai
-from datetime import datetime
+from datetime import datetime, date
 
 from models import Conversation, Message
 
@@ -34,6 +34,12 @@ class ConversationHandler:
 
         return chat_history
 
+    def __get_all_full_messages(self, conversation_id):
+        message_object = select(Message).where(Message.conversation_id == conversation_id)
+        messages = self.session.exec(message_object).all()
+
+        return messages
+
     def get_conversation_by_month(self, date):
         year, month = self.__parsing_date(date)
         conversation_object = select(Conversation).where(Conversation.nickname == self.nickname).where(Conversation.year == year).where(Conversation.month == month)
@@ -61,30 +67,56 @@ class ConversationHandler:
 
         return
 
-    def start_conversation(self):
-        conversation_id = uuid4().hex
-        conversation = Conversation(
-            nickname = self.nickname,
-            conversation_id = conversation_id
-        )
+    def __get_conversation_id_by_date(self, date):
+        date_object = datetime.strptime(date, "%Y-%m-%d")
 
-        self.session.add(conversation)
-        self.session.commit()
+        try:
+            conversation_object = select(Conversation).where(Conversation.year == date_object.year).where(Conversation.month == date_object.month).where(Conversation.day == date_object.day)
+            conversation_object = self.session.exec(conversation_object).first()
+        except Exception:
+            return 0
 
-        messages = [
-            {"role": "system", "content": "너는 친절한 심리상담가야. 사용자에게 오늘 하루는 어땠는지 물어보고 사용자가 응답하면 더 자세히 물어봐주고 위로해주는 상담가의 역할을 해줘. 사용자에게 보내는 너의 첫 메세지는 '안녕하세요! 오늘 하루는 어땠나요?'로 고정이야. 사용자의 응답에 적절하게 반응해주고 항상 더 자세히 질문해줘야 해. 그리고 2번 이상 응답을 받으면, '충분히 이야기를 나눈 것 같네요. 오늘 하루를 평가한다면 몇 점을 주시겠어요?'라는 말로 대화를 마무리해줘"},
-            {"role": "user", "content": "안녕"}
-        ]
+        return conversation_object.conversation_id
 
-        # OpenAI GPT-3.5 Turbo 모델에 대화를 요청합니다.
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=messages
-        )
+    def start_conversation(self, date):
+        conversation_id = self.__get_conversation_id_by_date(date)
+        if(conversation_id):
+            chat_history = self.__get_all_full_messages(conversation_id)
+        else:
+            conversation_id = uuid4().hex
+            conversation = Conversation(
+                nickname = self.nickname,
+                conversation_id = conversation_id
+            )
 
-        self.create_message(conversation_id, 0, response['choices'][0]['message']['content'], False)
+            self.session.add(conversation)
+            self.session.commit()
 
-        return {"conversation_id": conversation_id, "message": response['choices'][0]['message']['content']}
+            messages = [
+                {"role": "system", "content": "너는 친절한 심리상담가야. 사용자에게 오늘 하루는 어땠는지 물어보고 사용자가 응답하면 더 자세히 물어봐주고 위로해주는 상담가의 역할을 해줘. 사용자에게 보내는 너의 첫 메세지는 '안녕하세요! 오늘 하루는 어땠나요?'로 고정이야. 사용자의 응답에 적절하게 반응해주고 항상 더 자세히 질문해줘야 해. 그리고 2번 이상 응답을 받으면, '충분히 이야기를 나눈 것 같네요. 오늘 하루를 평가한다면 몇 점을 주시겠어요?'라는 말로 대화를 마무리해줘"},
+                {"role": "user", "content": "안녕"}
+            ]
+
+            # OpenAI GPT-3.5 Turbo 모델에 대화를 요청합니다.
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages
+            )
+
+            self.create_message(conversation_id, 0, response['choices'][0]['message']['content'], False)
+
+        chat_history = self.__get_all_full_messages(conversation_id)
+
+        if(len(chat_history) > 13):
+            is_enough = True
+        else:
+            is_enough = False
+
+        return {
+            "conversation_id": conversation_id,
+            "chat_history": chat_history,
+            "is_enough": is_enough
+        }
 
     def answer_conversation(self, user_answer, conversation_id):
         messages = [
@@ -115,7 +147,13 @@ class ConversationHandler:
 
         self.create_message(conversation_id, order + 1, assistant_response, False)
 
+        if(order > 13):
+            is_enough = True
+        else:
+            is_enough = False
+
         # 챗봇의 답변을 사용자 메시지와 함께 반환합니다.
         return {
-            "message": assistant_response
+            "message": assistant_response,
+            "is_enough": is_enough
         }
