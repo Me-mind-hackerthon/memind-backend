@@ -70,7 +70,7 @@ class ConversationHandler:
     def __get_conversation_id_by_date(self, date):
         date_object = datetime.strptime(date, "%Y-%m-%d")
 
-        conversation_object = select(Conversation).where(Conversation.year == date_object.year).where(Conversation.month == date_object.month).where(Conversation.day == date_object.day)
+        conversation_object = select(Conversation).where(Conversation.nickname == self.nickname).where(Conversation.year == date_object.year).where(Conversation.month == date_object.month).where(Conversation.day == date_object.day)
         conversation_object = self.session.exec(conversation_object).first()
 
         if(not conversation_object):
@@ -80,6 +80,7 @@ class ConversationHandler:
 
     def start_conversation(self, date):
         conversation_id = self.__get_conversation_id_by_date(date)
+
         if(conversation_id):
             chat_history = self.__get_all_full_messages(conversation_id)
         else:

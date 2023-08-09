@@ -1,4 +1,6 @@
 import os, boto3
+from fastapi import HTTPException, status
+from sqlmodel import select
 from uuid import uuid4
 
 from models import Image
@@ -16,7 +18,7 @@ class ImageHandler():
         file_name = uuid4().hex
         self.s3_client.upload_fileobj(
             image.file,
-            os.environ["bucket_name"], 
+            os.environ["bucket_name"],
             file_name, 
             ExtraArgs={
                 "ContentType": image.content_type
@@ -34,9 +36,22 @@ class ImageHandler():
             conversation_id = conversation_id
         )
 
-        self.session.add(image)
-        self.session.commit()
+        try:
+            self.session.add(image)
+            self.session.commit()
+        except Exception:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND, detail = "no such conversation id"
+            )
 
         return {
             "image_url": image_url
+        }
+
+    def get_image_list(self, conversation_id):
+        image_object = select(Image).where(Image.conversation_id == conversation_id)
+        image_object = self.session.exec(image_object).all()
+
+        return {
+            "photos": image_object
         }

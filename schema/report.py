@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel
-from typing import List
+from typing import List, Optional
 
 class ReportInSchema(SQLModel, table = False):
     conversation_id: str
@@ -16,7 +16,7 @@ class getReportOutSchema(SQLModel, table = False):
     suffering: int
     anger: int
     summary: str
-    midjourney_image: str
+    midjourney_image: Optional[str]
     keyword: List[str]
 
 class KeywordSchema(SQLModel, table = False):
