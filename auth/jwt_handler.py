@@ -10,7 +10,7 @@ load_dotenv("../.env")
 def create_access_token(user: str):
     payload = {
         "user": user,
-        "expires": time.time() + 3600
+        "expires": time.time() + 36000
     }
 
     token = jwt.encode(payload, os.environ["SECRET_KEY"], algorithm = "HS256")
