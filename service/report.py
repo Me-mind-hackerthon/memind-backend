@@ -166,10 +166,10 @@ class ReportHandler:
         }
 
     def get_dailyreport(self):
-        try:
-            report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
-            report = self.session.exec(report_object).one()
-        except Exception:
+        report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
+        report = self.session.exec(report_object).first()
+
+        if(not report):
             raise HTTPException(
                 status_code = status.HTTP_404_NOT_FOUND,
                 detail = "no such conversation id"
@@ -189,10 +189,10 @@ class ReportHandler:
         }
 
     def create_request_id(self, request_id):
-        try:
-            report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
-            report_object = self.session.exec(report_object).one()
-        except Exception:
+        report_object = select(DailyReport).where(DailyReport.conversation_id == self.conversation_id)
+        report_object = self.session.exec(report_object).first()
+
+        if(not report_object):
             raise HTTPException(
                 status_code = status.HTTP_404_NOT_FOUND, detail = "no such conversation id"
             )

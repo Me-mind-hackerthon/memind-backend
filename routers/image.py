@@ -25,3 +25,9 @@ def update_midjourney_image(request: MidjourneyUpdateIn, session = Depends(get_s
     result = ReportHandler(session, request.conversation_id).create_request_id(request.midjourney_url)
 
     return result
+
+@image_router.post("/{conversation_id}")
+def get_image(conversation_id: str, session = Depends(get_session)):
+    result = ImageHandler(session).get_image_list(conversation_id)
+
+    return result
