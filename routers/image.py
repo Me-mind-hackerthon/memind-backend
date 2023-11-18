@@ -1,27 +1,22 @@
+# image 관리를 위한 api router
 from fastapi import Depends, APIRouter, UploadFile, File
 
 from database.connection import get_session
-from service import ImageHandler, ReportHandler
-from schema import MidjourneyRequestsIn, messageOnlySchema, MidjourneyUpdateIn
+from service import ImageSaver, ImageListHandler
+from schema import ConversationInfoSchema, ImageUploadOutInfo, ImageListOutSchema
 
 image_router = APIRouter(
     prefix = "/api/image", tags = ["image"]
 )
 
-@image_router.post("/upload")
-def upload_image(conversation_id: str, image: UploadFile = File(...), session = Depends(get_session)):
-    result = ImageHandler(session).save_url_to_db(conversation_id, image)
+@image_router.post("/upload", response_model = ImageUploadOutInfo)
+async def upload_image(conversation_info: ConversationInfoSchema, image: UploadFile = File(...), session = Depends(get_session)):
+    result = await ImageSaver(session).save_url_to_db(conversation_info, image)
 
     return result
 
-@image_router.post("/create")
-def create_midjourney_request_id(request: MidjourneyRequestsIn, session = Depends(get_session)) -> messageOnlySchema:
-    result = ReportHandler(session, request.conversation_id).create_request_id(request.request_id)
-
-    return result
-
-@image_router.post("/update-image")
-def update_midjourney_image(request: MidjourneyUpdateIn, session = Depends(get_session)) -> messageOnlySchema:
-    result = ReportHandler(session, request.conversation_id).create_request_id(request.midjourney_url)
+@image_router.post("/get-list", response_model = ImageListOutSchema)
+async def get_image(conversation_info: ConversationInfoSchema, session = Depends(get_session)):
+    result = await ImageListHandler(session).get_image_list(conversation_info)
 
     return result
