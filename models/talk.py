@@ -2,6 +2,7 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime, date
+from uuid import uuid4
 
 from .user import User
 
@@ -14,9 +15,8 @@ class Conversation(SQLModel, table = True):
 
 class Message(SQLModel, table = True):
     conversation_id: str = Field(foreign_key = Conversation.conversation_id)
-    message_id: Optional[int] = Field(default = None, primary_key = True)
+    message_id: Optional[str] = Field(default_factory = uuid4().hex, primary_key = True)
     message_timestamp: Optional[str] = Field(default_factory = datetime.now())
     order: int
     is_from_user: bool
-    is_image: bool = Field(default = False)
     message: Optional[str]
