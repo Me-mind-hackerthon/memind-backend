@@ -1,4 +1,4 @@
 from sqlmodel import SQLModel
 
-class messageOnlySchema(SQLModel, table = False):
+class MessageOnlySchema(SQLModel, table = False):
     message: str
