@@ -1,4 +1,4 @@
-from .common import messageOnlySchema
+from .common import MessageOnlySchema
 from .talk import CreateMessageInSchema
 from .report import ReportInSchema, getReportOutSchema, KeywordSchema
 from .user import TokenResponse, UserInfo
