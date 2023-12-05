@@ -1,65 +1,87 @@
 import boto3, os
+from abc import ABC, abstractmethod
 from typing import Dict, List, Any
 from sqlmodel import select
 from uuid import uuid4
 
 from models import Image
-from exceptions import NoSuchConversationIdError
+from exception import NoSuchConversationIdError
 from schema import ConversationInfoSchema
+from service import ObjectCreator
 
-class ImageSaver:
+class ObjectUploader(ABC):
+    """ object를 다양한 저장소에 업로드하기 위한 인터페이스 """
     def __init__(self, session) -> None:
         self.session = session
+
+    @abstractmethod
+    def upload_object(self, obj):
+        pass
+
+class S3Uploader(ObjectUploader):
+    def __init__(self, session) -> None:
+        super().__init__(session)
         self.s3_client = boto3.client(
-            's3',
+            "s3",
             aws_access_key_id = os.environ["aws_access_key_id"],
             aws_secret_access_key = os.environ["aws_secret_access_key"]
         )
 
-    def __upload_image_to_s3_bucket(self, image) -> str:
+    def upload_object(self, obj) -> str:
         """ image를 s3에 업로드하고 url을 리턴하는 함수"""
-
         file_name = uuid4().hex
     
         self.s3_client.upload_fileobj(
-            image.file,
+            obj.file,
             os.environ["bucket_name"],
             file_name, 
             ExtraArgs={
-                "ContentType": image.content_type
+                "ContentType": obj.content_type
             }
         )
 
         image_url = f"https://{os.environ['bucket_name']}.s3.{os.environ['region']}.amazonaws.com/{file_name}"
+
         return image_url
 
-    async def save_url_to_db(self, conversation_info: ConversationInfoSchema, image) -> Dict[str, str]:
-        """ image의 s3 url을 해당 image가 속해있는 conversation_id와 함께 db에 저장하는 함수"""
+class ImageCreator(ObjectCreator):
+    def __init__(self, session) -> None:
+        super().__init__(session)
 
-        # image를 s3에 업로드하고 url을 생성
-        image_url = self.__upload_image_to_s3_bucket(image)
-
+    async def create_object(self, object_info):
         # db에 추가하기 위하여 Image 모델 객체 생성
-        image = Image(
-            image_url = image_url,
-            conversation_id = conversation_info.conversation_id
+        image_object = Image(
+            image_url = object_info["image_url"],
+            conversation_id = object_info["conversation_id"]
         )
 
         # db에 추가
         try:
-            self.session.add(image)
+            self.session.add(image_object)
             self.session.commit()
 
         # 존재하지 않는 conversation_id일 경우, 오류 발생
         except Exception:
             raise NoSuchConversationIdError
 
-        # db 추가 성공 시, image_url 리턴
-        return {
-            "image_url": image_url
+class ImageUploadController:
+    def __init__(self, session, object_uploader) -> None:
+        self.session = session
+        self.object_uploader = object_uploader
+
+    def upload_image_controll(self, obj, conversation_info) -> Dict[str, str]:
+        image_url = self.object_uploader(self.session).upload_object(obj)
+
+        object_info = {
+            "image_url": image_url,
+            "conversation_id": conversation_info.conversation_id
         }
 
-class ImageListHandler:
+        ImageCreator(self.session).create_object(object_info)
+
+        return object_info
+
+class ImageListLoader:
     def __init__(self, session) -> None:
         self.session = session
 
