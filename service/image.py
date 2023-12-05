@@ -70,7 +70,7 @@ class ImageUploadController:
         self.object_uploader = object_uploader
 
     def upload_image_controll(self, obj, conversation_info) -> Dict[str, str]:
-        image_url = self.object_uploader(self.session).upload_object(obj)
+        image_url = self.object_uploader.upload_object(obj)
 
         object_info = {
             "image_url": image_url,
