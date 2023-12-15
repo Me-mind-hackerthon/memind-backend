@@ -4,7 +4,7 @@ from typing import List, Optional
 class ReportInSchema(SQLModel, table = False):
     conversation_id: str
 
-class getReportOutSchema(SQLModel, table = False):
+class GetReportOutSchema(SQLModel, table = False):
     conversation_id: str
     report_id: int
     happiness: int
